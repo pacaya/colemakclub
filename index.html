@@ -156,6 +156,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                         </div>
                     </div>
                 </div>
+
+                <!-- Links Section -->
+                <div class="menuSection menuLinks">
+                    <a href="https://github.com/gnusenpai/colemakclub" target="_blank">Contribute on GitHub</a>
+                    <a href="https://www.change.org/p/microsoft-add-colemak-as-a-pre-installed-keyboard-layout-to-windows" target="_blank">Sign the Petition</a>
+                </div>
             </div>
         </div>
 
@@ -207,13 +213,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                     <div id="accuracyText"></div>
                     <div id="wpmText"></div>
                     <div id="goalStatus"></div>
-                    <div id="progressStats"></div>
-                    <button id="toggleChartBtn" class="noDisplay">
-                        Show Performance Chart
-                    </button>
-                    <div id="chartContainer" class="noDisplay">
-                        <canvas id="performanceChart"></canvas>
-                    </div>
                 </div>
             </div>
             <div class="cheatsheetContainer">
@@ -222,24 +221,27 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                     <button class="openUIButton"></button>
                 </div>
             </div>
-            <div class="bottomText">
-                <h3>
-                    Contribute on
-                    <a
-                        href="https://github.com/gnusenpai/colemakclub"
-                        target="_blank"
-                        >GitHub</a
-                    >.
-                </h3>
-                <h3>
-                    Sign the
-                    <a
-                        href="https://www.change.org/p/microsoft-add-colemak-as-a-pre-installed-keyboard-layout-to-windows"
-                        target="_blank"
-                        >Petition</a
-                    >
-                    to add Colemak to Windows.
-                </h3>
+            <div id="statsSection" class="transparent">
+                <div id="statsLeftColumn">
+                    <div id="progressStats"></div>
+                </div>
+                <div id="statsRightColumn">
+                    <div class="statsTabs">
+                        <button class="statsTab active" data-tab="chart">Chart</button>
+                        <button class="statsTab" data-tab="details">Details</button>
+                    </div>
+                    <div id="chartPanel" class="statsPanel active">
+                        <div id="chartContainer">
+                            <canvas id="performanceChart"></canvas>
+                        </div>
+                        <div id="chartPlaceholder" class="statsPlaceholder">
+                            Need at least 2 tests to show chart
+                        </div>
+                    </div>
+                    <div id="detailsPanel" class="statsPanel">
+                        <div id="detailsContent"></div>
+                    </div>
+                </div>
             </div>
         </section>
 

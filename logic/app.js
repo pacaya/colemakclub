@@ -138,6 +138,7 @@ var goalWpmInput,
   unlockAllButton,
   resetStatsButton,
   progressStatsDiv,
+  statsSection,
   progressionModal,
   progressionMessage,
   continueCurrentLevelBtn,
@@ -378,7 +379,7 @@ function hideProgressionPopup() {
   }
 }
 
-// Generate HTML for statistics display - compact version with expandable details
+// Generate HTML for statistics display - left column compact stats
 function generateStatsHTML(level) {
   var levelData = progressData.levelStats[level];
   var levelName = getLevelName(level);
@@ -386,34 +387,47 @@ function generateStatsHTML(level) {
   var html = '<div class="statsCompact">';
 
   if (levelData.totalTests === 0) {
-    html += '<div class="statsLine"><span class="statsLevelName">' + levelName + ':</span> No tests yet</div>';
+    html += '<div class="statsHeader">' + levelName + '</div>';
+    html += '<div class="statsEmpty">No tests yet</div>';
   } else {
-    // Compact single line with inline progress
-    html += '<div class="statsLine">';
-    html += '<span class="statsLevelName">' + levelName + ':</span> ';
-    html += levelData.totalTests + (levelData.totalTests === 1 ? ' test' : ' tests') + ' ';
-    html += '<span class="statsDivider">|</span> ';
-    html += levelData.avgWpm + ' WPM ';
-    html += '<span class="statsBest">(best ' + levelData.bestWpm + ')</span> ';
-    html += '<span class="statsDivider">|</span> ';
-    html += levelData.avgAccuracy + '% ';
-    html += '<span class="statsBest">(best ' + levelData.bestAccuracy + '%)</span>';
-
-    // Inline progress indicator (if level locking enabled and not level 8)
+    // Header with level name and test count
+    html += '<div class="statsHeader">';
+    html += '<span class="statsLevelName">' + levelName + '</span>';
+    html += '<span class="statsTests">' + levelData.totalTests + (levelData.totalTests === 1 ? ' test' : ' tests') + '</span>';
+    // Progress dots inline with header (if level locking enabled and not level 8)
     if (levelLockingEnabled && parseInt(level) < 8) {
-      html += ' <span class="statsDivider">|</span> ' + generateProgressBarHTML(level);
+      html += generateProgressBarHTML(level);
     }
-
     html += '</div>';
+
+    // Two-column stats (WPM and Accuracy)
+    html += '<div class="statsColumns">';
+
+    // WPM column
+    html += '<div class="statsCol">';
+    html += '<div class="statsValue">' + levelData.avgWpm + ' <span class="statsUnit">WPM</span></div>';
+    html += '<div class="statsBest">best ' + levelData.bestWpm + '</div>';
+    html += '</div>';
+
+    // Accuracy column
+    html += '<div class="statsCol">';
+    html += '<div class="statsValue">' + levelData.avgAccuracy + '<span class="statsUnit">%</span></div>';
+    html += '<div class="statsBest">best ' + levelData.bestAccuracy + '%</div>';
+    html += '</div>';
+
+    html += '</div>'; // end statsColumns
   }
 
-  // Expandable details section
-  html += '<div class="statsExpandable">';
-  html += '<button class="statsToggle" onclick="toggleStatsDetails()">';
-  html += '<span class="toggleIcon">▼</span> Details</button>';
+  html += '</div>'; // end statsCompact
 
-  // Hidden details section
-  html += '<div class="statsDetails hidden">';
+  return html;
+}
+
+// Generate HTML for details panel (right column)
+function generateDetailsHTML(level) {
+  var levelData = progressData.levelStats[level];
+  var levelName = getLevelName(level);
+  var html = '';
 
   // Current level detailed stats
   if (levelData.totalTests > 0) {
@@ -425,6 +439,11 @@ function generateStatsHTML(level) {
     html += '<div class="statsDetailRow">Accuracy: ' + levelData.avgAccuracy + '% avg';
     html += ' <span class="statsDetailMuted">(best ' + levelData.bestAccuracy + '%';
     html += ', worst ' + levelData.worstAccuracy + '%)</span></div>';
+    html += '</div>';
+  } else {
+    html += '<div class="statsDetailSection">';
+    html += '<div class="statsDetailTitle">' + levelName + '</div>';
+    html += '<div class="statsDetailMuted">No tests yet for this level</div>';
     html += '</div>';
   }
 
@@ -444,41 +463,78 @@ function generateStatsHTML(level) {
   }
   html += '</div></div>';
 
-  html += '</div>'; // end statsDetails
-  html += '</div>'; // end statsExpandable
-  html += '</div>'; // end statsCompact
-
   return html;
 }
 
-// Toggle stats details visibility
-function toggleStatsDetails() {
-  var details = document.querySelector('.statsDetails');
-  var toggle = document.querySelector('.statsToggle .toggleIcon');
-  if (details && toggle) {
-    details.classList.toggle('hidden');
-    toggle.textContent = details.classList.contains('hidden') ? '▼' : '▲';
+// Switch between chart and details tabs
+function switchStatsTab(tabName) {
+  var chartTab = document.querySelector('.statsTab[data-tab="chart"]');
+  var detailsTab = document.querySelector('.statsTab[data-tab="details"]');
+  var chartPanel = document.getElementById('chartPanel');
+  var detailsPanel = document.getElementById('detailsPanel');
+
+  if (!chartTab || !detailsTab || !chartPanel || !detailsPanel) return;
+
+  if (tabName === 'chart') {
+    chartTab.classList.add('active');
+    detailsTab.classList.remove('active');
+    chartPanel.classList.add('active');
+    detailsPanel.classList.remove('active');
+  } else {
+    chartTab.classList.remove('active');
+    detailsTab.classList.add('active');
+    chartPanel.classList.remove('active');
+    detailsPanel.classList.add('active');
   }
 }
 
 // Display statistics in the test results area
 function displayProgressStats(level) {
+  // Update left column with compact stats
   if (progressStatsDiv) {
     progressStatsDiv.innerHTML = generateStatsHTML(level);
   }
 
-  // Show chart toggle button if there are at least 2 tests
-  var toggleChartBtn = document.getElementById("toggleChartBtn");
-  var levelData = progressData.levelStats[level];
-  if (toggleChartBtn && levelData && levelData.lastHundredTests.length >= 2) {
-    toggleChartBtn.classList.remove("noDisplay");
-    toggleChartBtn.textContent = "Show Performance Chart";
-  } else if (toggleChartBtn) {
-    toggleChartBtn.classList.add("noDisplay");
+  // Update right column details panel
+  var detailsContent = document.getElementById("detailsContent");
+  if (detailsContent) {
+    detailsContent.innerHTML = generateDetailsHTML(level);
   }
 
-  // Hide chart initially (user can toggle it)
-  hidePerformanceChart();
+  // Handle chart display
+  var levelData = progressData.levelStats[level];
+  var chartContainer = document.getElementById("chartContainer");
+  var chartPlaceholder = document.getElementById("chartPlaceholder");
+
+  if (levelData && levelData.lastHundredTests.length >= 2) {
+    // Show chart, hide placeholder
+    if (chartContainer) chartContainer.classList.remove("noDisplay");
+    if (chartPlaceholder) chartPlaceholder.classList.add("noDisplay");
+    displayPerformanceChart(level);
+  } else {
+    // Hide chart, show placeholder
+    if (chartContainer) chartContainer.classList.add("noDisplay");
+    if (chartPlaceholder) chartPlaceholder.classList.remove("noDisplay");
+    hidePerformanceChart();
+  }
+}
+
+// Show stats on page load if there's existing data
+function showInitialStats() {
+  // Check if there's any existing progress data
+  var totalTests = 0;
+  for (var i = 1; i <= 8; i++) {
+    if (progressData.levelStats[i].totalTests > 0) {
+      totalTests += progressData.levelStats[i].totalTests;
+    }
+  }
+
+  // If there's data, show the stats section
+  if (totalTests > 0 && progressStatsDiv && statsSection) {
+    displayProgressStats(currentLevel);
+    statsSection.classList.remove("transparent");
+    statsSection.classList.add("initialStats");
+  }
 }
 
 // Generate HTML for inline progress indicator
@@ -507,25 +563,17 @@ function displayPerformanceChart(level) {
   var levelData = progressData.levelStats[level];
   var tests = levelData.lastHundredTests;
 
-  var chartContainer = document.getElementById("chartContainer");
   var canvas = document.getElementById("performanceChart");
-
-  if (!chartContainer || !canvas) return;
+  if (!canvas) return;
 
   // Need at least 2 data points for a meaningful chart
-  if (tests.length < 2) {
-    chartContainer.classList.add("noDisplay");
-    return;
-  }
+  if (tests.length < 2) return;
 
   // Destroy existing chart if any
   if (performanceChartInstance) {
     performanceChartInstance.destroy();
     performanceChartInstance = null;
   }
-
-  // Show chart container
-  chartContainer.classList.remove("noDisplay");
 
   var ctx = canvas.getContext("2d");
   var levelName = getLevelName(level);
@@ -603,10 +651,6 @@ function displayPerformanceChart(level) {
 
 // Hide chart
 function hidePerformanceChart() {
-  var chartContainer = document.getElementById("chartContainer");
-  if (chartContainer) {
-    chartContainer.classList.add("noDisplay");
-  }
   if (performanceChartInstance) {
     performanceChartInstance.destroy();
     performanceChartInstance = null;
@@ -656,6 +700,7 @@ function initProgressTracking() {
   unlockAllButton = document.querySelector("#unlockAllButton");
   resetStatsButton = document.querySelector("#resetStatsButton");
   progressStatsDiv = document.querySelector("#progressStats");
+  statsSection = document.querySelector("#statsSection");
   progressionModal = document.querySelector("#progressionModal");
   progressionMessage = document.querySelector("#progressionMessage");
   continueCurrentLevelBtn = document.querySelector("#continueCurrentLevel");
@@ -730,13 +775,14 @@ function initProgressTracking() {
     });
   }
 
-  // Chart toggle button
-  var toggleChartBtn = document.getElementById("toggleChartBtn");
-  if (toggleChartBtn) {
-    toggleChartBtn.addEventListener("click", function () {
-      togglePerformanceChart(currentLevel);
+  // Tab buttons for switching between chart and details
+  var statsTabs = document.querySelectorAll(".statsTab");
+  statsTabs.forEach(function(tab) {
+    tab.addEventListener("click", function() {
+      var tabName = this.getAttribute("data-tab");
+      switchStatsTab(tabName);
     });
-  }
+  });
 }
 
 /*________________progress tracking functions_________________*/
@@ -744,6 +790,9 @@ function initProgressTracking() {
 
 start();
 init();
+
+// Show stats on page load if there's any existing data (must be after init/reset)
+showInitialStats();
 
 // this is the true init, which is only called once. Init will have to be renamed
 // Call to initialize
@@ -2054,8 +2103,15 @@ function reset() {
 
   // set mapping to off
 
-  // set accuracyText to be transparent
+  // set accuracyText to be transparent and remove initial stats styling
   testResults.classList.add("transparent");
+  testResults.classList.remove("initialStats");
+
+  // hide stats section
+  if (statsSection) {
+    statsSection.classList.add("transparent");
+    statsSection.classList.remove("initialStats");
+  }
 
   // no display for reset button during game
   resetButton.classList.add("noDisplay");
@@ -2188,6 +2244,12 @@ function endGame() {
 
   // make accuracy visible
   testResults.classList.toggle("transparent");
+
+  // show stats section
+  if (statsSection) {
+    statsSection.classList.remove("transparent");
+    statsSection.classList.remove("initialStats");
+  }
 
   // set correct and errors counts to 0
   correct = 0;

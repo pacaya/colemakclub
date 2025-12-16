@@ -157,6 +157,26 @@ select {
     text-align: right;
 }
 
+.menuLinks {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8vh;
+    padding-top: 1vh;
+    border-top: 1px solid #333;
+    margin-top: 1vh;
+}
+
+.menuLinks a {
+    color: #888;
+    font-size: 1.3vh;
+    text-decoration: none;
+    text-align: center;
+}
+
+.menuLinks a:hover {
+    color: var(--accent-color);
+}
+
 .preferenceMenu ul.preferences {
     display: flex;
     flex-direction: column;
@@ -302,7 +322,7 @@ button:focus {
     /*padding: 0 20vh 0 0;*/
     /*width: 100%;*/
     /*color: white;*/
-    margin: 10vh 0 0 0;
+    margin: 3vh 0 0 0;
 
     letter-spacing: 0.1vmax;
 }
@@ -370,19 +390,13 @@ input {
     -webkit-box-pack: start;
     -ms-flex-pack: start;
     justify-content: flex-start;
-    padding-bottom: 6vh;
-    -webkit-box-flex: 1;
+    padding-bottom: 1vh;
+    margin-bottom: 1vh;
+    -webkit-box-flex: 0;
 
-    -ms-flex: 1 1 8vh;
+    -ms-flex: 0 0 auto;
 
-    flex: 0.8 1 7vh;
-}
-
-.bottomText {
-    position: absolute;
-    font-size: 1vmin;
-    bottom: 0;
-    text-align: center;
+    flex: 0 0 auto;
 }
 
 a:link {
@@ -466,6 +480,7 @@ input:checked + .slider:before {
     display: -webkit-box;
     display: -ms-flexbox;
     display: flex;
+    margin-top: 2vh;
 }
 
 .row {
@@ -776,6 +791,118 @@ input:checked + .slider:before {
     opacity: 0;
 }
 
+/* Initial stats shown on page load */
+#testResults.initialStats {
+    opacity: 0.7;
+}
+
+#testResults.initialStats #accuracyText,
+#testResults.initialStats #wpmText,
+#testResults.initialStats #goalStatus {
+    display: none;
+}
+
+/* Stats section (below keyboard) - two column layout */
+#statsSection {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 4vmin;
+    margin-top: 2vh;
+    transition: opacity 0.15s linear;
+    width: 100%;
+    max-width: 70vw;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#statsSection.transparent {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#statsSection.initialStats {
+    opacity: 0.7;
+}
+
+/* Left column - compact stats */
+#statsLeftColumn {
+    flex: 0 0 auto;
+    min-width: 15vmin;
+}
+
+/* Right column - chart or details */
+#statsRightColumn {
+    flex: 1 1 auto;
+    max-width: 45vmin;
+    min-width: 30vmin;
+}
+
+/* Tabs for switching views */
+.statsTabs {
+    display: flex;
+    gap: 0.5vmin;
+    margin-bottom: 1vh;
+    justify-content: center;
+}
+
+.statsTab {
+    background: transparent;
+    border: 1px solid #444;
+    color: #888;
+    padding: 0.4vh 1.2vh;
+    font-size: 1.2vmin;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.15s ease;
+}
+
+.statsTab:hover {
+    border-color: #666;
+    color: #aaa;
+}
+
+.statsTab.active {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+    background: rgba(135, 39, 184, 0.1);
+}
+
+/* Panels */
+.statsPanel {
+    display: none;
+}
+
+.statsPanel.active {
+    display: block;
+}
+
+/* Chart container */
+#chartContainer {
+    background: rgba(17, 17, 17, 0.8);
+    border-radius: 5px;
+    padding: 1vh;
+}
+
+#chartContainer.noDisplay {
+    display: none;
+}
+
+/* Chart placeholder */
+.statsPlaceholder {
+    color: #555;
+    font-size: 1.3vmin;
+    text-align: center;
+    padding: 3vh 2vh;
+    border: 1px dashed #333;
+    border-radius: 5px;
+}
+
+.statsPlaceholder.noDisplay {
+    display: none;
+}
+
 .currentLevel {
     color: var(--accent-color);
     border-color: var(--accent-color);
@@ -927,56 +1054,86 @@ nav button.locked:hover {
     background-color: rgba(255, 107, 107, 0.1);
 }
 
-/* Compact progress stats */
+/* Two-column progress stats */
 #progressStats {
-    margin-top: 1vh;
-    margin-bottom: 4vh;
+    margin-top: 0.8vh;
+    margin-bottom: 3vh;
     text-align: center;
-    max-width: 60vmin;
 }
 
 .statsCompact {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.5vh;
+    gap: 0.3vh;
 }
 
-.statsLine {
-    font-size: 1.5vmin;
-    color: #ccc;
-    line-height: 1.4;
+.statsHeader {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1vmin;
+    margin-bottom: 0.3vh;
 }
 
 .statsLevelName {
     color: var(--accent-color);
     font-weight: bold;
+    font-size: 1.5vmin;
 }
 
-.statsDivider {
-    color: #555;
-    margin: 0 0.3vmin;
+.statsTests {
+    color: #666;
+    font-size: 1.2vmin;
+}
+
+.statsEmpty {
+    color: #666;
+    font-size: 1.3vmin;
+}
+
+/* Two-column layout */
+.statsColumns {
+    display: flex;
+    justify-content: center;
+    gap: 4vmin;
+}
+
+.statsCol {
+    text-align: center;
+}
+
+.statsValue {
+    font-size: 2.2vmin;
+    color: #ddd;
+    font-weight: bold;
+}
+
+.statsUnit {
+    font-size: 1.4vmin;
+    color: #888;
+    font-weight: normal;
 }
 
 .statsBest {
-    color: #777;
-    font-size: 1.3vmin;
+    color: #666;
+    font-size: 1.1vmin;
 }
 
 /* Inline progress dots */
 .progressInline {
     display: inline-flex;
-    gap: 0.3vmin;
+    gap: 0.4vmin;
     margin-left: 0.5vmin;
     vertical-align: middle;
 }
 
 .progressDot {
-    width: 1vmin;
-    height: 1vmin;
+    width: 0.9vmin;
+    height: 0.9vmin;
     border-radius: 50%;
     background: #444;
-    border: 1px solid #666;
+    border: 1px solid #555;
     display: inline-block;
 }
 
@@ -986,42 +1143,12 @@ nav button.locked:hover {
     box-shadow: 0 0 4px rgba(0, 255, 0, 0.5);
 }
 
-/* Expandable stats section */
-.statsExpandable {
-    margin-top: 0.8vh;
-}
-
-.statsToggle {
-    font-size: 1.2vmin;
-    padding: 0.4vh 1vh;
-    background: transparent;
-    border: 1px solid #444;
-    color: #666;
-    cursor: pointer;
-    border-radius: 3px;
-}
-
-.statsToggle:hover {
-    border-color: #666;
-    color: #888;
-}
-
-.toggleIcon {
-    font-size: 1vmin;
-    margin-right: 0.3vmin;
-}
-
-.statsDetails {
-    margin-top: 1vh;
+/* Details panel (right column) */
+#detailsContent {
     padding: 1vh;
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid #333;
-    border-radius: 4px;
+    background: rgba(17, 17, 17, 0.8);
+    border-radius: 5px;
     text-align: left;
-}
-
-.statsDetails.hidden {
-    display: none;
 }
 
 .statsDetailSection {
