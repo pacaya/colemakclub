@@ -191,7 +191,7 @@
     return html;
   }
 
-  function switchStatsTab(tabName) {
+  function switchStatsTab(tabName, savePreference) {
     var recentTab = document.querySelector('.statsTab[data-tab="recent"]');
     var alltimeTab = document.querySelector('.statsTab[data-tab="alltime"]');
     var detailsTab = document.querySelector('.statsTab[data-tab="details"]');
@@ -218,6 +218,10 @@
     } else {
       detailsTab.classList.add("active");
       detailsPanel.classList.add("active");
+    }
+
+    if (savePreference !== false) {
+      localStorage.setItem("statsTabPreference", tabName);
     }
   }
 
@@ -383,6 +387,16 @@
         switchStatsTab(tabName);
       });
     });
+
+    var savedTab = localStorage.getItem("statsTabPreference");
+    if (
+      savedTab &&
+      (savedTab === "recent" ||
+        savedTab === "alltime" ||
+        savedTab === "details")
+    ) {
+      switchStatsTab(savedTab, false);
+    }
   };
 
   // Check if a key is typeable (alphanumeric, space, enter, or punctuation)

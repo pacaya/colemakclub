@@ -60,9 +60,15 @@
 
     var wpm;
     if (!S.timeLimitMode) {
-      wpm = ((S.correct + S.errors) / 5 / (S.minutes + S.seconds / 60)).toFixed(2);
+      wpm = ((S.correct + S.errors) / 5 / (S.minutes + S.seconds / 60)).toFixed(
+        2,
+      );
     } else {
-      wpm = ((S.correct + S.errors) / 5 / (D.timeLimitModeInput.value / 60)).toFixed(2);
+      wpm = (
+        (S.correct + S.errors) /
+        5 /
+        (D.timeLimitModeInput.value / 60)
+      ).toFixed(2);
     }
 
     var accuracy = ((100 * S.correct) / (S.correct + S.errors)).toFixed(2);
@@ -70,7 +76,11 @@
     var wpmNum = parseFloat(wpm);
     var accuracyNum = parseFloat(accuracy);
 
-    var shouldAdvance = CC.progress.recordTestResult(S.currentLevel, wpmNum, accuracyNum);
+    var shouldAdvance = CC.progress.recordTestResult(
+      S.currentLevel,
+      wpmNum,
+      accuracyNum,
+    );
     CC.progress.saveProgressData();
 
     var goalMet = CC.progress.meetsGoals(wpmNum, accuracyNum);
@@ -79,10 +89,15 @@
       goalMessage = "Goal Met!";
     } else {
       var missing = [];
-      if (wpmNum < S.globalGoals.wpm) missing.push("WPM: " + wpmNum + "/" + S.globalGoals.wpm);
+      if (wpmNum < S.globalGoals.wpm)
+        missing.push("WPM: " + wpmNum + " (need " + S.globalGoals.wpm + ")");
       if (accuracyNum < S.globalGoals.accuracy)
         missing.push(
-          "Accuracy: " + accuracyNum + "%/" + S.globalGoals.accuracy + "%",
+          "Accuracy: " +
+            accuracyNum +
+            "% (need " +
+            S.globalGoals.accuracy +
+            "%)",
         );
       goalMessage = "Goal Missed - " + missing.join(", ");
     }
@@ -197,24 +212,33 @@
           if (e.ctrlKey) {
             for (var i = 0; i < S.letterIndex; i++) {
               if (D.prompt.children[0].children[S.wordIndex].children[i]) {
-                D.prompt.children[0].children[S.wordIndex].children[i].style.color =
-                  "gray";
+                D.prompt.children[0].children[S.wordIndex].children[
+                  i
+                ].style.color = "gray";
               }
             }
             D.input.value = "";
             S.letterIndex = 0;
           } else {
-            if (D.prompt.children[0].children[S.wordIndex].children[S.letterIndex]) {
-              D.prompt.children[0].children[S.wordIndex].children[S.letterIndex].style.color =
-                "gray";
+            if (
+              D.prompt.children[0].children[S.wordIndex].children[S.letterIndex]
+            ) {
+              D.prompt.children[0].children[S.wordIndex].children[
+                S.letterIndex
+              ].style.color = "gray";
             }
           }
         } else if (!specialKeyCodes.includes(e.keyCode) || e.keyCode == 32) {
           CC.sound.playClickSound();
           S.correct++;
-          if (D.prompt.children[0].children[S.wordIndex].children[S.letterIndex - 1]) {
-            D.prompt.children[0].children[S.wordIndex].children[S.letterIndex - 1].style.color =
-              "green";
+          if (
+            D.prompt.children[0].children[S.wordIndex].children[
+              S.letterIndex - 1
+            ]
+          ) {
+            D.prompt.children[0].children[S.wordIndex].children[
+              S.letterIndex - 1
+            ].style.color = "green";
           }
         }
       } else {
@@ -224,24 +248,33 @@
           if (e.ctrlKey) {
             for (var j = 0; j < S.letterIndex; j++) {
               if (D.prompt.children[0].children[S.wordIndex].children[j]) {
-                D.prompt.children[0].children[S.wordIndex].children[j].style.color =
-                  "gray";
+                D.prompt.children[0].children[S.wordIndex].children[
+                  j
+                ].style.color = "gray";
               }
             }
             D.input.value = "";
             S.letterIndex = 0;
           } else {
-            if (D.prompt.children[0].children[S.wordIndex].children[S.letterIndex]) {
-              D.prompt.children[0].children[S.wordIndex].children[S.letterIndex].style.color =
-                "gray";
+            if (
+              D.prompt.children[0].children[S.wordIndex].children[S.letterIndex]
+            ) {
+              D.prompt.children[0].children[S.wordIndex].children[
+                S.letterIndex
+              ].style.color = "gray";
             }
           }
         } else if (!specialKeyCodes.includes(e.keyCode) || e.keyCode == 32) {
           CC.sound.playErrorSound();
           S.errors++;
-          if (D.prompt.children[0].children[S.wordIndex].children[S.letterIndex - 1]) {
-            D.prompt.children[0].children[S.wordIndex].children[S.letterIndex - 1].style.color =
-              "red";
+          if (
+            D.prompt.children[0].children[S.wordIndex].children[
+              S.letterIndex - 1
+            ]
+          ) {
+            D.prompt.children[0].children[S.wordIndex].children[
+              S.letterIndex - 1
+            ].style.color = "red";
           }
         }
 
@@ -252,7 +285,12 @@
         }
       }
 
-      if (!S.timeLimitMode && S.score == S.scoreMax - 1 && CC.typing.checkAnswer() && S.gameOn) {
+      if (
+        !S.timeLimitMode &&
+        S.score == S.scoreMax - 1 &&
+        CC.typing.checkAnswer() &&
+        S.gameOn
+      ) {
         CC.typing.endGame();
       }
     });
@@ -263,5 +301,3 @@
     });
   };
 })(window.CC);
-
-
