@@ -1309,5 +1309,76 @@ nav button.locked:hover {
     height: auto !important;
 }
 
+/* All-time chart container */
+#allTimeChartContainer {
+    width: 100%;
+    max-width: 50vmin;
+    margin: 1vh auto;
+    padding: 1.5vh;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid #333;
+    border-radius: 6px;
+}
+
+#allTimeChartContainer.noDisplay {
+    display: none;
+}
+
+#allTimeChartContainer canvas {
+    width: 100% !important;
+    height: auto !important;
+}
+
+#allTimePlaceholder {
+    color: #555;
+    font-size: 1.3vmin;
+    text-align: center;
+    padding: 3vh 2vh;
+    border: 1px dashed #333;
+    border-radius: 5px;
+    max-width: 50vmin;
+    margin: 1vh auto;
+}
+
+#allTimePlaceholder.noDisplay {
+    display: none;
+}
+
 /*__________________progress tracking styles_________________*/
 /*___________________________________________________________*/
+
+/* Results popup styles */
+.resultsModalContent {
+    min-width: 25vmin;
+}
+
+#resultsWpm {
+    font-size: 5vh;
+    color: var(--accent-color);
+    margin-bottom: 1vh;
+}
+
+#resultsAccuracy {
+    font-size: 3vh;
+    color: #ddd;
+    margin-bottom: 2vh;
+}
+
+#resultsGoalStatus {
+    font-size: 2.2vh;
+    margin-bottom: 2vh;
+}
+
+#resultsGoalStatus.goalMet {
+    color: var(--tertiary-accent-color);
+}
+
+#resultsGoalStatus.goalMissed {
+    color: var(--warning-color);
+}
+
+.dismissHint {
+    font-size: 1.5vh;
+    color: #666;
+    margin-top: 1vh;
+}

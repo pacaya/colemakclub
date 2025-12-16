@@ -11,8 +11,6 @@ var prompt = document.querySelector(".prompt"),
   //
   timeText = document.querySelector("#timeText"),
   //
-  resetButton = document.querySelector("#resetButton"),
-  //
   accuracyText = document.querySelector("#accuracyText"),
   //
   wpmText = document.querySelector("#wpmText"),
@@ -155,6 +153,8 @@ function initProgressData(layoutName) {
   var data = {
     layout: layoutName,
     unlockedLevel: 1, // highest level user has unlocked
+    schemaVersion: 2, // for migration detection
+    firstTestDate: null, // timestamp of first test ever
     levelStats: {},
   };
 
@@ -170,6 +170,13 @@ function initProgressData(layoutName) {
       bestAccuracy: 0,
       worstAccuracy: 100,
       totalTests: 0,
+      // Time-bucketed history for all-time statistics
+      history: {
+        daily: {},   // Key: "YYYY-MM-DD" -> bucket
+        weekly: {},  // Key: "YYYY-Www" -> bucket
+        monthly: {}, // Key: "YYYY-MM" -> bucket
+        yearly: {},  // Key: "YYYY" -> bucket
+      },
     };
   }
 
@@ -184,6 +191,20 @@ function loadProgressData() {
   if (stored) {
     try {
       progressData = JSON.parse(stored);
+
+      // Run migration if needed (for users with old schema)
+      progressData = migrateProgressData(progressData);
+
+      // Run consolidation on load to keep storage efficient
+      for (var level = 1; level <= 8; level++) {
+        if (progressData.levelStats[level]) {
+          consolidateHistoryBuckets(progressData.levelStats[level]);
+        }
+      }
+
+      // Save after migration/consolidation
+      saveProgressData();
+
     } catch (e) {
       console.error("Error parsing progress data, initializing new:", e);
       progressData = initProgressData(currentLayout);
@@ -265,12 +286,13 @@ function calculateLevelStats(levelData) {
 // Record a test result and return true if should auto-advance
 function recordTestResult(level, wpm, accuracy) {
   var levelData = progressData.levelStats[level];
+  var timestamp = Date.now();
 
   // Create test record
   var testRecord = {
     wpm: wpm,
     accuracy: accuracy,
-    timestamp: Date.now(),
+    timestamp: timestamp,
     metGoal: meetsGoals(wpm, accuracy),
   };
 
@@ -282,6 +304,14 @@ function recordTestResult(level, wpm, accuracy) {
 
   // Update total tests count
   levelData.totalTests++;
+
+  // Update time-bucketed history for all-time statistics
+  updateHistoryBucket(levelData, wpm, accuracy, timestamp);
+
+  // Track first test date
+  if (!progressData.firstTestDate) {
+    progressData.firstTestDate = timestamp;
+  }
 
   // Recalculate statistics
   calculateLevelStats(levelData);
@@ -315,6 +345,262 @@ function unlockNextLevel(fromLevel) {
     saveProgressData();
   }
 }
+
+/*___________________________________________________________*/
+/*________________time bucket helper functions_______________*/
+
+// Generate date key for daily bucket: "YYYY-MM-DD"
+function getDailyKey(timestamp) {
+  var date = new Date(timestamp);
+  return date.toISOString().split("T")[0];
+}
+
+// Get ISO week number
+function getISOWeek(date) {
+  var d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  var dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+// Generate ISO week key for weekly bucket: "YYYY-Www"
+function getWeeklyKey(timestamp) {
+  var date = new Date(timestamp);
+  var year = date.getFullYear();
+  var week = getISOWeek(date);
+  return year + "-W" + String(week).padStart(2, "0");
+}
+
+// Generate month key for monthly bucket: "YYYY-MM"
+function getMonthlyKey(timestamp) {
+  var date = new Date(timestamp);
+  var year = date.getFullYear();
+  var month = String(date.getMonth() + 1).padStart(2, "0");
+  return year + "-" + month;
+}
+
+// Generate year key for yearly bucket: "YYYY"
+function getYearlyKey(timestamp) {
+  return String(new Date(timestamp).getFullYear());
+}
+
+// Create an empty bucket for storing aggregated statistics
+function createEmptyBucket() {
+  return {
+    avgWpm: 0,
+    avgAccuracy: 0,
+    bestWpm: 0,
+    worstWpm: 999,
+    bestAccuracy: 0,
+    worstAccuracy: 100,
+    testCount: 0,
+    totalWpm: 0,
+    totalAccuracy: 0,
+  };
+}
+
+// Update the daily history bucket with a new test result
+function updateHistoryBucket(levelData, wpm, accuracy, timestamp) {
+  // Ensure history structure exists
+  if (!levelData.history) {
+    levelData.history = { daily: {}, weekly: {}, monthly: {}, yearly: {} };
+  }
+
+  var dailyKey = getDailyKey(timestamp);
+
+  // Create or update daily bucket
+  if (!levelData.history.daily[dailyKey]) {
+    levelData.history.daily[dailyKey] = createEmptyBucket();
+  }
+
+  var bucket = levelData.history.daily[dailyKey];
+  bucket.testCount++;
+  bucket.totalWpm += wpm;
+  bucket.totalAccuracy += accuracy;
+  bucket.avgWpm = Math.round((bucket.totalWpm / bucket.testCount) * 100) / 100;
+  bucket.avgAccuracy = Math.round((bucket.totalAccuracy / bucket.testCount) * 100) / 100;
+
+  if (wpm > bucket.bestWpm) bucket.bestWpm = wpm;
+  if (wpm < bucket.worstWpm) bucket.worstWpm = wpm;
+  if (accuracy > bucket.bestAccuracy) bucket.bestAccuracy = accuracy;
+  if (accuracy < bucket.worstAccuracy) bucket.worstAccuracy = accuracy;
+}
+
+// Parse bucket key back to timestamp for comparison
+function parseKeyToTimestamp(key) {
+  if (key.includes("-W")) {
+    // Weekly key: "YYYY-Www"
+    var parts = key.split("-W");
+    var year = parseInt(parts[0]);
+    var week = parseInt(parts[1]);
+    // Get first day of ISO week
+    var simple = new Date(year, 0, 1 + (week - 1) * 7);
+    var dow = simple.getDay();
+    var ISOweekStart = simple;
+    if (dow <= 4) {
+      ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
+    } else {
+      ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
+    }
+    return ISOweekStart.getTime();
+  } else if (key.length === 4) {
+    // Yearly key: "YYYY"
+    return new Date(parseInt(key), 0, 1).getTime();
+  } else if (key.length === 7) {
+    // Monthly key: "YYYY-MM"
+    return new Date(key + "-01").getTime();
+  } else {
+    // Daily key: "YYYY-MM-DD"
+    return new Date(key).getTime();
+  }
+}
+
+// Merge source bucket into target bucket
+function mergeBuckets(target, source) {
+  target.testCount += source.testCount;
+  target.totalWpm += source.totalWpm;
+  target.totalAccuracy += source.totalAccuracy;
+  target.avgWpm = Math.round((target.totalWpm / target.testCount) * 100) / 100;
+  target.avgAccuracy = Math.round((target.totalAccuracy / target.testCount) * 100) / 100;
+
+  if (source.bestWpm > target.bestWpm) target.bestWpm = source.bestWpm;
+  if (source.worstWpm < target.worstWpm) target.worstWpm = source.worstWpm;
+  if (source.bestAccuracy > target.bestAccuracy) target.bestAccuracy = source.bestAccuracy;
+  if (source.worstAccuracy < target.worstAccuracy) target.worstAccuracy = source.worstAccuracy;
+}
+
+// Consolidate buckets from source to target based on cutoff timestamp
+function consolidateBucketsByAge(sourceObj, targetObj, cutoffTimestamp, targetKeyFn) {
+  var keysToRemove = [];
+
+  for (var key in sourceObj) {
+    var timestamp = parseKeyToTimestamp(key);
+    if (timestamp < cutoffTimestamp) {
+      var targetKey = targetKeyFn(timestamp);
+
+      if (!targetObj[targetKey]) {
+        targetObj[targetKey] = createEmptyBucket();
+      }
+
+      // Merge bucket into target
+      mergeBuckets(targetObj[targetKey], sourceObj[key]);
+      keysToRemove.push(key);
+    }
+  }
+
+  // Remove consolidated source buckets
+  for (var i = 0; i < keysToRemove.length; i++) {
+    delete sourceObj[keysToRemove[i]];
+  }
+}
+
+// Consolidate history buckets based on age thresholds
+// Daily -> Weekly (after 30 days)
+// Weekly -> Monthly (after 6 months)
+// Monthly -> Yearly (after 2 years)
+function consolidateHistoryBuckets(levelData) {
+  if (!levelData.history) return;
+
+  var now = Date.now();
+  var thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+  var sixMonthsAgo = now - 180 * 24 * 60 * 60 * 1000;
+  var twoYearsAgo = now - 730 * 24 * 60 * 60 * 1000;
+
+  // Consolidate daily -> weekly (for data older than 30 days)
+  consolidateBucketsByAge(
+    levelData.history.daily,
+    levelData.history.weekly,
+    thirtyDaysAgo,
+    getWeeklyKey
+  );
+
+  // Consolidate weekly -> monthly (for data older than 6 months)
+  consolidateBucketsByAge(
+    levelData.history.weekly,
+    levelData.history.monthly,
+    sixMonthsAgo,
+    getMonthlyKey
+  );
+
+  // Consolidate monthly -> yearly (for data older than 2 years)
+  consolidateBucketsByAge(
+    levelData.history.monthly,
+    levelData.history.yearly,
+    twoYearsAgo,
+    getYearlyKey
+  );
+}
+
+// Migrate old progress data to new schema with history buckets
+function migrateProgressData(data) {
+  // Check if migration needed
+  if (data.schemaVersion && data.schemaVersion >= 2) {
+    return data; // Already migrated
+  }
+
+  console.log("Migrating progress data to schema version 2...");
+
+  // Set schema version
+  data.schemaVersion = 2;
+
+  // Determine first test date from existing data
+  var earliestTimestamp = null;
+
+  for (var level = 1; level <= 8; level++) {
+    var levelData = data.levelStats[level];
+    if (!levelData) continue;
+
+    // Initialize history structure
+    if (!levelData.history) {
+      levelData.history = { daily: {}, weekly: {}, monthly: {}, yearly: {} };
+    }
+
+    // Migrate lastHundredTests to history buckets
+    if (levelData.lastHundredTests && levelData.lastHundredTests.length > 0) {
+      for (var i = 0; i < levelData.lastHundredTests.length; i++) {
+        var test = levelData.lastHundredTests[i];
+        if (test.timestamp) {
+          // Track earliest timestamp
+          if (!earliestTimestamp || test.timestamp < earliestTimestamp) {
+            earliestTimestamp = test.timestamp;
+          }
+
+          // Add to daily bucket
+          var dailyKey = getDailyKey(test.timestamp);
+          if (!levelData.history.daily[dailyKey]) {
+            levelData.history.daily[dailyKey] = createEmptyBucket();
+          }
+
+          var bucket = levelData.history.daily[dailyKey];
+          bucket.testCount++;
+          bucket.totalWpm += test.wpm;
+          bucket.totalAccuracy += test.accuracy;
+          bucket.avgWpm = Math.round((bucket.totalWpm / bucket.testCount) * 100) / 100;
+          bucket.avgAccuracy = Math.round((bucket.totalAccuracy / bucket.testCount) * 100) / 100;
+
+          if (test.wpm > bucket.bestWpm) bucket.bestWpm = test.wpm;
+          if (test.wpm < bucket.worstWpm) bucket.worstWpm = test.wpm;
+          if (test.accuracy > bucket.bestAccuracy) bucket.bestAccuracy = test.accuracy;
+          if (test.accuracy < bucket.worstAccuracy) bucket.worstAccuracy = test.accuracy;
+        }
+      }
+    }
+
+    // Run consolidation for this level
+    consolidateHistoryBuckets(levelData);
+  }
+
+  // Set first test date
+  if (earliestTimestamp) {
+    data.firstTestDate = earliestTimestamp;
+  }
+
+  return data;
+}
+
+/*________________time bucket helper functions_______________*/
+/*___________________________________________________________*/
 
 // Check if a level is accessible
 function isLevelUnlocked(level) {
@@ -377,6 +663,58 @@ function hideProgressionPopup() {
   if (progressionModal) {
     progressionModal.classList.add("hidden");
   }
+}
+
+// Results popup elements and state
+var resultsModal = document.querySelector("#resultsModal");
+var resultsWpm = document.querySelector("#resultsWpm");
+var resultsAccuracy = document.querySelector("#resultsAccuracy");
+var resultsGoalStatus = document.querySelector("#resultsGoalStatus");
+var resultsDismissHint = document.querySelector("#resultsDismissHint");
+var resultsPopupCanClose = false;
+
+// Show the results popup
+function showResultsPopup(wpm, accuracy, goalMet, goalMessage) {
+  if (!resultsModal) return;
+
+  resultsWpm.innerHTML = wpm + " WPM";
+  resultsAccuracy.innerHTML = accuracy + "% Accuracy";
+  resultsGoalStatus.innerHTML = goalMessage;
+  resultsGoalStatus.className = goalMet ? "goalMet" : "goalMissed";
+  resultsDismissHint.innerHTML = "";
+
+  resultsPopupCanClose = false;
+  resultsModal.classList.remove("hidden");
+
+  // Enable closing after 0.5s delay
+  setTimeout(function () {
+    resultsPopupCanClose = true;
+    resultsDismissHint.innerHTML = "Press any key or click to continue";
+  }, 500);
+}
+
+// Hide the results popup and start next test
+function hideResultsPopup() {
+  if (resultsModal) {
+    resultsModal.classList.add("hidden");
+  }
+  reset();
+}
+
+// Results popup event listeners
+document.addEventListener("keydown", function (e) {
+  if (resultsPopupCanClose && !resultsModal.classList.contains("hidden")) {
+    e.preventDefault();
+    hideResultsPopup();
+  }
+});
+
+if (resultsModal) {
+  resultsModal.addEventListener("click", function () {
+    if (resultsPopupCanClose) {
+      hideResultsPopup();
+    }
+  });
 }
 
 // Generate HTML for statistics display - left column compact stats
@@ -466,24 +804,35 @@ function generateDetailsHTML(level) {
   return html;
 }
 
-// Switch between chart and details tabs
+// Switch between recent, alltime, and details tabs
 function switchStatsTab(tabName) {
-  var chartTab = document.querySelector('.statsTab[data-tab="chart"]');
+  var recentTab = document.querySelector('.statsTab[data-tab="recent"]');
+  var alltimeTab = document.querySelector('.statsTab[data-tab="alltime"]');
   var detailsTab = document.querySelector('.statsTab[data-tab="details"]');
-  var chartPanel = document.getElementById('chartPanel');
+  var recentPanel = document.getElementById('recentPanel');
+  var alltimePanel = document.getElementById('alltimePanel');
   var detailsPanel = document.getElementById('detailsPanel');
 
-  if (!chartTab || !detailsTab || !chartPanel || !detailsPanel) return;
+  if (!recentTab || !alltimeTab || !detailsTab) return;
+  if (!recentPanel || !alltimePanel || !detailsPanel) return;
 
-  if (tabName === 'chart') {
-    chartTab.classList.add('active');
-    detailsTab.classList.remove('active');
-    chartPanel.classList.add('active');
-    detailsPanel.classList.remove('active');
+  // Remove active from all tabs and panels
+  recentTab.classList.remove('active');
+  alltimeTab.classList.remove('active');
+  detailsTab.classList.remove('active');
+  recentPanel.classList.remove('active');
+  alltimePanel.classList.remove('active');
+  detailsPanel.classList.remove('active');
+
+  // Add active to selected tab and panel
+  if (tabName === 'recent') {
+    recentTab.classList.add('active');
+    recentPanel.classList.add('active');
+  } else if (tabName === 'alltime') {
+    alltimeTab.classList.add('active');
+    alltimePanel.classList.add('active');
   } else {
-    chartTab.classList.remove('active');
     detailsTab.classList.add('active');
-    chartPanel.classList.remove('active');
     detailsPanel.classList.add('active');
   }
 }
@@ -501,7 +850,7 @@ function displayProgressStats(level) {
     detailsContent.innerHTML = generateDetailsHTML(level);
   }
 
-  // Handle chart display
+  // Handle recent chart display
   var levelData = progressData.levelStats[level];
   var chartContainer = document.getElementById("chartContainer");
   var chartPlaceholder = document.getElementById("chartPlaceholder");
@@ -516,6 +865,22 @@ function displayProgressStats(level) {
     if (chartContainer) chartContainer.classList.add("noDisplay");
     if (chartPlaceholder) chartPlaceholder.classList.remove("noDisplay");
     hidePerformanceChart();
+  }
+
+  // Handle all-time chart display
+  var allTimeChartContainer = document.getElementById("allTimeChartContainer");
+  var allTimePlaceholder = document.getElementById("allTimePlaceholder");
+
+  if (levelData && hasAllTimeData(levelData)) {
+    // Show all-time chart, hide placeholder
+    if (allTimeChartContainer) allTimeChartContainer.classList.remove("noDisplay");
+    if (allTimePlaceholder) allTimePlaceholder.classList.add("noDisplay");
+    displayAllTimeChart(level);
+  } else {
+    // Hide all-time chart, show placeholder
+    if (allTimeChartContainer) allTimeChartContainer.classList.add("noDisplay");
+    if (allTimePlaceholder) allTimePlaceholder.classList.remove("noDisplay");
+    hideAllTimeChart();
   }
 }
 
@@ -657,6 +1022,261 @@ function hidePerformanceChart() {
   }
 }
 
+/*___________________________________________________________*/
+/*________________all-time chart functions___________________*/
+
+// All-time chart instance (global for cleanup)
+var allTimeChartInstance = null;
+
+// Collect bucket data into unified array
+function collectBucketData(buckets, dataPoints, granularity) {
+  for (var key in buckets) {
+    var bucket = buckets[key];
+    var timestamp = parseKeyToTimestamp(key);
+    dataPoints.push({
+      key: key,
+      timestamp: timestamp,
+      granularity: granularity,
+      avgWpm: bucket.avgWpm,
+      avgAccuracy: bucket.avgAccuracy,
+      testCount: bucket.testCount,
+    });
+  }
+}
+
+// Get expected gap in milliseconds for a granularity level
+function getExpectedGap(granularity) {
+  var day = 24 * 60 * 60 * 1000;
+  switch (granularity) {
+    case "daily":
+      return day;
+    case "weekly":
+      return 7 * day;
+    case "monthly":
+      return 30 * day;
+    case "yearly":
+      return 365 * day;
+    default:
+      return day;
+  }
+}
+
+// Fill gaps in data with interpolated points (same as previous value)
+function fillGaps(dataPoints) {
+  if (dataPoints.length < 2) return dataPoints;
+
+  var filled = [];
+
+  for (var i = 0; i < dataPoints.length; i++) {
+    filled.push(dataPoints[i]);
+
+    if (i < dataPoints.length - 1) {
+      var current = dataPoints[i];
+      var next = dataPoints[i + 1];
+      var gap = next.timestamp - current.timestamp;
+
+      // If gap is more than expected for granularity, add interpolated point
+      var expectedGap = getExpectedGap(current.granularity);
+
+      if (gap > expectedGap * 1.5) {
+        // Add a single interpolated point at the midpoint
+        filled.push({
+          key: "interpolated",
+          timestamp: current.timestamp + gap / 2,
+          granularity: "interpolated",
+          avgWpm: current.avgWpm, // Same as previous
+          avgAccuracy: current.avgAccuracy,
+          testCount: 0,
+          isInterpolated: true,
+        });
+      }
+    }
+  }
+
+  return filled;
+}
+
+// Prepare all-time chart data from history buckets
+function prepareAllTimeChartData(levelData) {
+  var dataPoints = [];
+  var history = levelData.history;
+
+  if (!history) return dataPoints;
+
+  // Collect all data points with their timestamps
+  collectBucketData(history.yearly, dataPoints, "yearly");
+  collectBucketData(history.monthly, dataPoints, "monthly");
+  collectBucketData(history.weekly, dataPoints, "weekly");
+  collectBucketData(history.daily, dataPoints, "daily");
+
+  // Sort by timestamp
+  dataPoints.sort(function (a, b) {
+    return a.timestamp - b.timestamp;
+  });
+
+  // Fill gaps with interpolation
+  dataPoints = fillGaps(dataPoints);
+
+  return dataPoints;
+}
+
+// Format date label based on granularity
+function formatDateLabel(timestamp, granularity) {
+  var date = new Date(timestamp);
+  switch (granularity) {
+    case "daily":
+      return date.getMonth() + 1 + "/" + date.getDate();
+    case "weekly":
+      return "W" + getISOWeek(date);
+    case "monthly":
+      return date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+    case "yearly":
+      return String(date.getFullYear());
+    case "interpolated":
+      return "";
+    default:
+      return "";
+  }
+}
+
+// Display all-time performance chart
+function displayAllTimeChart(level) {
+  var levelData = progressData.levelStats[level];
+  var dataPoints = prepareAllTimeChartData(levelData);
+
+  var canvas = document.getElementById("allTimeChart");
+  if (!canvas) return;
+
+  // Need at least 2 data points for a meaningful chart
+  if (dataPoints.length < 2) return;
+
+  // Destroy existing chart if any
+  if (allTimeChartInstance) {
+    allTimeChartInstance.destroy();
+    allTimeChartInstance = null;
+  }
+
+  var ctx = canvas.getContext("2d");
+  var levelName = getLevelName(level);
+
+  // Format labels based on data range
+  var labels = dataPoints.map(function (dp) {
+    return formatDateLabel(dp.timestamp, dp.granularity);
+  });
+
+  allTimeChartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: "WPM",
+          data: dataPoints.map(function (dp) {
+            return dp.avgWpm;
+          }),
+          borderColor: "#8727b8",
+          backgroundColor: "rgba(135, 39, 184, 0.1)",
+          tension: 0.3,
+          fill: true,
+          yAxisID: "y",
+          pointRadius: dataPoints.map(function (dp) {
+            return dp.isInterpolated ? 0 : 3;
+          }),
+        },
+        {
+          label: "Accuracy %",
+          data: dataPoints.map(function (dp) {
+            return dp.avgAccuracy;
+          }),
+          borderColor: "orange",
+          backgroundColor: "rgba(255, 165, 0, 0.1)",
+          tension: 0.3,
+          fill: false,
+          yAxisID: "y1",
+          pointRadius: dataPoints.map(function (dp) {
+            return dp.isInterpolated ? 0 : 3;
+          }),
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        title: {
+          display: true,
+          text: levelName + " - All-Time Performance",
+          color: "#fff",
+          font: { size: 14 },
+        },
+        legend: {
+          labels: { color: "#ccc" },
+        },
+        tooltip: {
+          callbacks: {
+            afterLabel: function (context) {
+              var dp = dataPoints[context.dataIndex];
+              if (dp.isInterpolated) {
+                return "(No data - estimated)";
+              }
+              return dp.testCount + " test" + (dp.testCount === 1 ? "" : "s");
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: "#888",
+            maxRotation: 45,
+            minRotation: 45,
+          },
+          grid: { color: "#333" },
+        },
+        y: {
+          type: "linear",
+          position: "left",
+          title: { display: true, text: "WPM", color: "#8727b8" },
+          ticks: { color: "#8727b8" },
+          grid: { color: "#333" },
+        },
+        y1: {
+          type: "linear",
+          position: "right",
+          title: { display: true, text: "Accuracy %", color: "orange" },
+          ticks: { color: "orange" },
+          min: 70,
+          max: 100,
+          grid: { drawOnChartArea: false },
+        },
+      },
+    },
+  });
+}
+
+// Hide all-time chart
+function hideAllTimeChart() {
+  if (allTimeChartInstance) {
+    allTimeChartInstance.destroy();
+    allTimeChartInstance = null;
+  }
+}
+
+// Check if there's enough history data for all-time chart
+function hasAllTimeData(levelData) {
+  if (!levelData.history) return false;
+  var history = levelData.history;
+  var totalBuckets =
+    Object.keys(history.daily).length +
+    Object.keys(history.weekly).length +
+    Object.keys(history.monthly).length +
+    Object.keys(history.yearly).length;
+  return totalBuckets >= 2;
+}
+
+/*________________all-time chart functions___________________*/
+/*___________________________________________________________*/
+
 // Toggle chart visibility
 function togglePerformanceChart(level) {
   var chartContainer = document.getElementById("chartContainer");
@@ -763,6 +1383,7 @@ function initProgressTracking() {
   if (continueCurrentLevelBtn) {
     continueCurrentLevelBtn.addEventListener("click", function () {
       hideProgressionPopup();
+      reset();
     });
   }
 
@@ -2040,16 +2661,10 @@ mappingStatusButton.addEventListener("click", () => {
   input.focus();
 });
 
-// resetButton listener
-resetButton.addEventListener("click", () => {
-  console.log("reset button called");
-  reset();
-});
-
 /*________________OTHER FUNCTIONS___________________*/
 
-// resets everything to the beginning of game state. Run when the reset
-// button is called or when a level is changed
+// resets everything to the beginning of game state. Run when a level is changed
+// or when a test ends (auto-starts next test)
 // Set a new prompt word and change variable text
 function reset() {
   deleteFirstLine = false; // make this true every time we finish typing a line
@@ -2112,9 +2727,6 @@ function reset() {
     statsSection.classList.add("transparent");
     statsSection.classList.remove("initialStats");
   }
-
-  // no display for reset button during game
-  resetButton.classList.add("noDisplay");
 
   //set prompt to visible
   prompt.classList.remove("noDisplay");
@@ -2181,12 +2793,6 @@ function checkAnswer() {
 }
 
 function endGame() {
-  // erase prompt
-  prompt.classList.toggle("noDisplay");
-
-  // make resetButton visible
-  resetButton.classList.remove("noDisplay");
-
   // pause timer
   gameOn = false;
 
@@ -2201,33 +2807,24 @@ function endGame() {
   // calculate accuracy
   let accuracy = ((100 * correct) / (correct + errors)).toFixed(2);
 
-  // set accuracyText
-  accuracyText.innerHTML = "Accuracy: " + accuracy + "%";
-  wpmText.innerHTML = "WPM: " + wpm;
-
   // Record test result and check for auto-advancement
   var wpmNum = parseFloat(wpm);
   var accuracyNum = parseFloat(accuracy);
   var shouldAdvance = recordTestResult(currentLevel, wpmNum, accuracyNum);
   saveProgressData();
 
-  // Display goal status
-  var goalStatusDiv = document.querySelector("#goalStatus");
-  if (goalStatusDiv) {
-    if (meetsGoals(wpmNum, accuracyNum)) {
-      goalStatusDiv.innerHTML = "Goal Met!";
-      goalStatusDiv.className = "goalMet";
-    } else {
-      var missing = [];
-      if (wpmNum < globalGoals.wpm)
-        missing.push("WPM: " + wpmNum + "/" + globalGoals.wpm);
-      if (accuracyNum < globalGoals.accuracy)
-        missing.push(
-          "Accuracy: " + accuracyNum + "%/" + globalGoals.accuracy + "%",
-        );
-      goalStatusDiv.innerHTML = "Goal Missed - " + missing.join(", ");
-      goalStatusDiv.className = "goalMissed";
-    }
+  // Build goal status message
+  var goalMet = meetsGoals(wpmNum, accuracyNum);
+  var goalMessage;
+  if (goalMet) {
+    goalMessage = "Goal Met!";
+  } else {
+    var missing = [];
+    if (wpmNum < globalGoals.wpm)
+      missing.push("WPM: " + wpmNum + "/" + globalGoals.wpm);
+    if (accuracyNum < globalGoals.accuracy)
+      missing.push("Accuracy: " + accuracyNum + "%/" + globalGoals.accuracy + "%");
+    goalMessage = "Goal Missed - " + missing.join(", ");
   }
 
   // Display progress statistics
@@ -2240,23 +2837,14 @@ function endGame() {
     unlockNextLevel(currentLevel);
     updateLevelLocking();
     showLevelAdvancementPopup(currentLevel, nextLevel);
-  }
-
-  // make accuracy visible
-  testResults.classList.toggle("transparent");
-
-  // show stats section
-  if (statsSection) {
-    statsSection.classList.remove("transparent");
-    statsSection.classList.remove("initialStats");
+  } else {
+    // Show results popup (advancement popup handles its own flow)
+    showResultsPopup(wpm, accuracy, goalMet, goalMessage);
   }
 
   // set correct and errors counts to 0
   correct = 0;
   errors = 0;
-
-  // change focus to resetButton
-  resetButton.focus();
 
   // update scoreText
   updateScoreText();

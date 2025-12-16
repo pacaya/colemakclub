@@ -203,7 +203,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                 <div class="fade" id="fadeElement">
                     <h2 class="noDisplay prompt"></h2>
                 </div>
-                <button id="resetButton" class="noDisplay">Reset</button>
                 <input id="userInput" type="paragraph" spellcheck="false" />
                 <div id="scoreAndClock">
                     <span id="scoreText">0/50</span>
@@ -227,15 +226,24 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                 </div>
                 <div id="statsRightColumn">
                     <div class="statsTabs">
-                        <button class="statsTab active" data-tab="chart">Chart</button>
+                        <button class="statsTab" data-tab="recent">Recent</button>
+                        <button class="statsTab active" data-tab="alltime">All-Time</button>
                         <button class="statsTab" data-tab="details">Details</button>
                     </div>
-                    <div id="chartPanel" class="statsPanel active">
+                    <div id="recentPanel" class="statsPanel">
                         <div id="chartContainer">
                             <canvas id="performanceChart"></canvas>
                         </div>
                         <div id="chartPlaceholder" class="statsPlaceholder">
                             Need at least 2 tests to show chart
+                        </div>
+                    </div>
+                    <div id="alltimePanel" class="statsPanel active">
+                        <div id="allTimeChartContainer">
+                            <canvas id="allTimeChart"></canvas>
+                        </div>
+                        <div id="allTimePlaceholder" class="statsPlaceholder">
+                            Need data from multiple days to show all-time trends
                         </div>
                     </div>
                     <div id="detailsPanel" class="statsPanel">
@@ -265,6 +273,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                         Advance to Next Level
                     </button>
                 </div>
+            </div>
+        </div>
+
+        <div id="resultsModal" class="modal hidden">
+            <div class="modalContent resultsModalContent">
+                <div id="resultsWpm"></div>
+                <div id="resultsAccuracy"></div>
+                <div id="resultsGoalStatus"></div>
+                <div id="resultsDismissHint" class="dismissHint"></div>
             </div>
         </div>
 
