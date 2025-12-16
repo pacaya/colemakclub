@@ -378,60 +378,87 @@ function hideProgressionPopup() {
   }
 }
 
-// Generate HTML for statistics display
+// Generate HTML for statistics display - compact version with expandable details
 function generateStatsHTML(level) {
   var levelData = progressData.levelStats[level];
   var levelName = getLevelName(level);
 
-  var html = '<div class="currentLevelStats">';
-  html += "<h4>" + levelName + " Statistics</h4>";
+  var html = '<div class="statsCompact">';
 
   if (levelData.totalTests === 0) {
-    html += "<p>No tests completed yet on this level.</p>";
+    html += '<div class="statsLine"><span class="statsLevelName">' + levelName + ':</span> No tests yet</div>';
   } else {
-    html += "<p>Tests: " + levelData.totalTests + " | ";
-    html += "Avg WPM: " + levelData.avgWpm + " | ";
-    html += "Avg Accuracy: " + levelData.avgAccuracy + "%</p>";
-    html += "<p>Best WPM: " + levelData.bestWpm + " | ";
-    html +=
-      "Worst WPM: " +
-      (levelData.worstWpm === 999 ? "-" : levelData.worstWpm) +
-      "</p>";
-    html += "<p>Best Accuracy: " + levelData.bestAccuracy + "% | ";
-    html +=
-      "Worst Accuracy: " +
-      (levelData.worstAccuracy === 100 && levelData.totalTests === 0
-        ? "-"
-        : levelData.worstAccuracy) +
-      "%</p>";
+    // Compact single line with inline progress
+    html += '<div class="statsLine">';
+    html += '<span class="statsLevelName">' + levelName + ':</span> ';
+    html += levelData.totalTests + (levelData.totalTests === 1 ? ' test' : ' tests') + ' ';
+    html += '<span class="statsDivider">|</span> ';
+    html += levelData.avgWpm + ' WPM ';
+    html += '<span class="statsBest">(best ' + levelData.bestWpm + ')</span> ';
+    html += '<span class="statsDivider">|</span> ';
+    html += levelData.avgAccuracy + '% ';
+    html += '<span class="statsBest">(best ' + levelData.bestAccuracy + '%)</span>';
+
+    // Inline progress indicator (if level locking enabled and not level 8)
+    if (levelLockingEnabled && parseInt(level) < 8) {
+      html += ' <span class="statsDivider">|</span> ' + generateProgressBarHTML(level);
+    }
+
+    html += '</div>';
   }
 
-  // Visual progress bar toward next level
-  if (levelLockingEnabled) {
-    html += generateProgressBarHTML(level);
-  }
+  // Expandable details section
+  html += '<div class="statsExpandable">';
+  html += '<button class="statsToggle" onclick="toggleStatsDetails()">';
+  html += '<span class="toggleIcon">▼</span> Details</button>';
 
-  html += "</div>";
+  // Hidden details section
+  html += '<div class="statsDetails hidden">';
+
+  // Current level detailed stats
+  if (levelData.totalTests > 0) {
+    html += '<div class="statsDetailSection">';
+    html += '<div class="statsDetailTitle">' + levelName + '</div>';
+    html += '<div class="statsDetailRow">WPM: ' + levelData.avgWpm + ' avg';
+    html += ' <span class="statsDetailMuted">(best ' + levelData.bestWpm;
+    html += ', worst ' + (levelData.worstWpm === 999 ? '-' : levelData.worstWpm) + ')</span></div>';
+    html += '<div class="statsDetailRow">Accuracy: ' + levelData.avgAccuracy + '% avg';
+    html += ' <span class="statsDetailMuted">(best ' + levelData.bestAccuracy + '%';
+    html += ', worst ' + levelData.worstAccuracy + '%)</span></div>';
+    html += '</div>';
+  }
 
   // All levels summary
-  html += '<div class="allLevelsStats">';
-  html += "<h4>All Levels Overview</h4>";
   var totalTests = 0;
-  var levelsWithTests = 0;
   for (var i = 1; i <= 8; i++) {
-    var stats = progressData.levelStats[i];
-    if (stats.totalTests > 0) {
-      totalTests += stats.totalTests;
-      levelsWithTests++;
+    if (progressData.levelStats[i].totalTests > 0) {
+      totalTests += progressData.levelStats[i].totalTests;
     }
   }
-  html += "<p>Total tests across all levels: " + totalTests + "</p>";
+
+  html += '<div class="statsDetailSection">';
+  html += '<div class="statsDetailTitle">All Levels</div>';
+  html += '<div class="statsDetailRow">Total tests: ' + totalTests;
   if (levelLockingEnabled) {
-    html += "<p>Unlocked levels: " + progressData.unlockedLevel + "/8</p>";
+    html += ' <span class="statsDetailMuted">| Unlocked: ' + progressData.unlockedLevel + '/8</span>';
   }
-  html += "</div>";
+  html += '</div></div>';
+
+  html += '</div>'; // end statsDetails
+  html += '</div>'; // end statsExpandable
+  html += '</div>'; // end statsCompact
 
   return html;
+}
+
+// Toggle stats details visibility
+function toggleStatsDetails() {
+  var details = document.querySelector('.statsDetails');
+  var toggle = document.querySelector('.statsToggle .toggleIcon');
+  if (details && toggle) {
+    details.classList.toggle('hidden');
+    toggle.textContent = details.classList.contains('hidden') ? '▼' : '▲';
+  }
 }
 
 // Display statistics in the test results area
@@ -454,39 +481,22 @@ function displayProgressStats(level) {
   hidePerformanceChart();
 }
 
-// Generate HTML for progress bar showing consecutive successes
+// Generate HTML for inline progress indicator
 function generateProgressBarHTML(level) {
   var levelData = progressData.levelStats[level];
-  var successes = Math.min(levelData.consecutiveSuccesses, 3); // Cap at 3 for display
+  var successes = Math.min(levelData.consecutiveSuccesses, 3);
 
   // Don't show progress bar for level 8 (final level)
   if (parseInt(level) >= 8) {
     return "";
   }
 
-  var segments = "";
+  var dots = "";
   for (var i = 0; i < 3; i++) {
-    segments +=
-      '<div class="progressSegment ' +
-      (i < successes ? "filled" : "") +
-      '"></div>';
+    dots += '<span class="progressDot ' + (i < successes ? "filled" : "") + '"></span>';
   }
 
-  var nextLevelName = getLevelName(parseInt(level) + 1);
-
-  return (
-    '<div class="progressBarContainer">' +
-    '<span class="progressBarLabel">Progress to ' +
-    nextLevelName +
-    ":</span>" +
-    '<div class="progressBar">' +
-    segments +
-    "</div>" +
-    '<span class="progressBarLabel">' +
-    successes +
-    "/3</span>" +
-    "</div>"
-  );
+  return '<span class="progressInline">' + dots + '</span>';
 }
 
 // Chart instance (global for cleanup)
@@ -860,6 +870,16 @@ document.addEventListener("keydown", (e) => {
       clearSelectedInput();
       init();
     }
+  }
+});
+
+// Warn user before leaving page during active test
+window.addEventListener("beforeunload", (e) => {
+  if (gameOn) {
+    e.preventDefault();
+    // Modern browsers require returnValue to be set
+    e.returnValue = "";
+    return "";
   }
 });
 

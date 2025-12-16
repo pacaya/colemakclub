@@ -66,138 +66,95 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
         <button class="preferenceButton"></button>
         <div class="preferenceMenu">
             <button class="closePreferenceButton"></button>
-            <ul class="preferences">
-                <li>
-                    Capital Letters Allowed<input
-                        class="capitalLettersAllowed"
-                        type="checkbox"
-                        autocomplete="off"
-                    />
-                </li>
-                <li>
-                    Require Backspace Correction<input
-                        class="requireBackspaceCorrectionToggle"
-                        type="checkbox"
-                        autocomplete="off"
-                        checked
-                    />
-                </li>
-                <li>
-                    Punctuation Allowed<input
-                        class="punctuationModeButton"
-                        type="checkbox"
-                        autocomplete="off"
-                    />
-                </li>
-                <li>
-                    Full Sentence Mode<input
-                        class="fullSentenceMode"
-                        type="checkbox"
-                        autocomplete="off"
-                    />
-                </li>
-                <li>
-                    Word Scrolling Mode
-                    <input
-                        class="wordScrollingModeButton"
-                        type="checkbox"
-                        autocomplete="off"
-                        checked
-                    />
-                </li>
-                <li>
-                    <input
-                        class="timeLimitModeInput noDisplay"
-                        type="number"
-                        value="60"
-                        autocomplete="off"
-                    />
-                    Time Limit Mode<input
-                        class="timeLimitModeButton"
-                        type="checkbox"
-                        autocomplete="off"
-                    />
-                </li>
-                <li>
-                    <input
-                        class="wordLimitModeInput"
-                        type="number"
-                        value="50"
-                        step="10"
-                        autocomplete="off"
-                    />
-                    Word Limit Mode
-                    <input
-                        class="wordLimitModeButton"
-                        type="checkbox"
-                        autocomplete="off"
-                        checked
-                    />
-                </li>
-                <li>
-                    Show Cheatsheet<input
-                        class="showCheatsheetButton"
-                        type="checkbox"
-                        autocomplete="off"
-                        checked
-                    />
-                </li>
-                <li>
-                    Play Sound On Click<input
-                        class="playSoundOnClick"
-                        type="checkbox"
-                        autocomplete="off"
-                    />
-                </li>
-                <li>
-                    Play Sound On Error<input
-                        class="playSoundOnError"
-                        type="checkbox"
-                        autocomplete="off"
-                    />
-                </li>
-            </ul>
-            <div class="progressSettings">
-                <h3>Progress Tracking</h3>
-                <div class="goalInputs">
-                    <label
-                        >WPM Goal:
-                        <input
-                            id="goalWpmInput"
-                            type="number"
-                            value="50"
-                            min="10"
-                            max="200"
-                            autocomplete="off"
-                    /></label>
-                    <label
-                        >Accuracy Goal:
-                        <input
-                            id="goalAccuracyInput"
-                            type="number"
-                            value="98"
-                            min="50"
-                            max="100"
-                            autocomplete="off"
-                        />%</label
-                    >
+            <div class="menuScroll">
+                <!-- Practice Mode Section -->
+                <div class="menuSection">
+                    <div class="menuSectionHeader">Practice</div>
+                    <ul class="preferences">
+                        <li>
+                            Word Scrolling
+                            <input class="wordScrollingModeButton" type="checkbox" autocomplete="off" checked />
+                        </li>
+                        <li>
+                            <input class="wordLimitModeInput" type="number" value="50" step="10" autocomplete="off" />
+                            Word Limit
+                            <input class="wordLimitModeButton" type="checkbox" autocomplete="off" checked />
+                        </li>
+                        <li>
+                            <input class="timeLimitModeInput noDisplay" type="number" value="60" autocomplete="off" />
+                            Time Limit
+                            <input class="timeLimitModeButton" type="checkbox" autocomplete="off" />
+                        </li>
+                        <li>
+                            Backspace Required
+                            <input class="requireBackspaceCorrectionToggle" type="checkbox" autocomplete="off" checked />
+                        </li>
+                    </ul>
                 </div>
-                <div class="progressToggles">
-                    <label
-                        ><input
-                            id="levelLockingToggle"
-                            type="checkbox"
-                            autocomplete="off"
-                            checked
-                        />
-                        Level Locking</label
-                    >
+
+                <!-- Content Section -->
+                <div class="menuSection">
+                    <div class="menuSectionHeader">Content</div>
+                    <ul class="preferences">
+                        <li>
+                            Capitals
+                            <input class="capitalLettersAllowed" type="checkbox" autocomplete="off" />
+                        </li>
+                        <li>
+                            Punctuation
+                            <input class="punctuationModeButton" type="checkbox" autocomplete="off" />
+                        </li>
+                        <li>
+                            Full Sentences
+                            <input class="fullSentenceMode" type="checkbox" autocomplete="off" />
+                        </li>
+                    </ul>
                 </div>
-                <div class="progressButtons">
-                    <button id="unlockAllButton">Unlock All Levels</button>
-                    <button id="resetStatsButton" class="warningButton">
-                        Reset Statistics
-                    </button>
+
+                <!-- Display Section -->
+                <div class="menuSection">
+                    <div class="menuSectionHeader">Display</div>
+                    <ul class="preferences">
+                        <li>
+                            Cheatsheet
+                            <input class="showCheatsheetButton" type="checkbox" autocomplete="off" checked />
+                        </li>
+                        <li>
+                            Click Sound
+                            <input class="playSoundOnClick" type="checkbox" autocomplete="off" />
+                        </li>
+                        <li>
+                            Error Sound
+                            <input class="playSoundOnError" type="checkbox" autocomplete="off" />
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Progress Section -->
+                <div class="menuSection">
+                    <div class="menuSectionHeader">Progress</div>
+                    <div class="progressSettings">
+                        <div class="goalInputsCompact">
+                            <label>
+                                <input id="goalWpmInput" type="number" value="50" min="10" max="200" autocomplete="off" />
+                                WPM
+                            </label>
+                            <label>
+                                <input id="goalAccuracyInput" type="number" value="98" min="50" max="100" autocomplete="off" />%
+                                Acc
+                            </label>
+                        </div>
+                        <div class="progressToggles">
+                            <label>
+                                <input id="levelLockingToggle" type="checkbox" autocomplete="off" checked />
+                                Level Locking
+                            </label>
+                        </div>
+                        <div class="progressButtonsCompact">
+                            <button id="unlockAllButton">Unlock All</button>
+                            <button id="resetStatsButton" class="warningButton">Reset</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
