@@ -385,6 +385,23 @@
     });
   };
 
+  // Check if a key is typeable (alphanumeric, space, enter, or punctuation)
+  function isTypeableKey(e) {
+    var keyCode = e.keyCode;
+    // Enter (13) or Space (32)
+    if (keyCode === 13 || keyCode === 32) return true;
+    // Alphanumeric keys (a-z: 65-90, 0-9: 48-57)
+    if ((keyCode >= 65 && keyCode <= 90) || (keyCode >= 48 && keyCode <= 57))
+      return true;
+    // Numpad numbers (96-105)
+    if (keyCode >= 96 && keyCode <= 105) return true;
+    // Common punctuation and symbols (semicolon, equals, comma, minus, period, slash, backtick)
+    if (keyCode >= 186 && keyCode <= 192) return true;
+    // Brackets, backslash, quote
+    if (keyCode >= 219 && keyCode <= 222) return true;
+    return false;
+  }
+
   CC.statsUI.initResultsPopupListeners = function () {
     ensureResultsState();
     var D = getD();
@@ -396,8 +413,12 @@
         S.resultsPopupCanClose &&
         !D.resultsModal.classList.contains("hidden")
       ) {
-        e.preventDefault();
-        CC.statsUI.hideResultsPopup();
+        // Only close on typeable keys (alphanumeric, space, enter, punctuation)
+        if (isTypeableKey(e)) {
+          e.preventDefault();
+          e.stopPropagation();
+          CC.statsUI.hideResultsPopup();
+        }
       }
     });
 

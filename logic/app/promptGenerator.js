@@ -50,7 +50,8 @@
   CC.game.randomLetterJumble = function () {
     var S = CC.state;
     var ext = CC.external;
-    var letters = ext.levelDictionaries[S.currentLayout]["lvl" + S.currentLevel];
+    var letters =
+      ext.levelDictionaries[S.currentLayout]["lvl" + S.currentLevel];
     var randWordLength = Math.floor(Math.random() * 5) + 1;
     var jumble = "";
     for (var i = 0; i < randWordLength; i++) {
@@ -91,19 +92,29 @@
       if (S.sentenceStartIndex === -1) {
         S.sentenceStartIndex = ext.getPosition(ext.sentence, ".", rand) + 1;
         S.sentenceEndIndex =
-          ext.sentence.substring(S.sentenceStartIndex + S.lineLength + 2).indexOf(" ") +
+          ext.sentence
+            .substring(S.sentenceStartIndex + S.lineLength + 2)
+            .indexOf(" ") +
           S.sentenceStartIndex +
           S.lineLength +
           1;
-        str = ext.sentence.substring(S.sentenceStartIndex, S.sentenceEndIndex + 1);
+        str = ext.sentence.substring(
+          S.sentenceStartIndex,
+          S.sentenceEndIndex + 1,
+        );
       } else {
         S.sentenceStartIndex = S.sentenceEndIndex + 1;
         S.sentenceEndIndex =
-          ext.sentence.substring(S.sentenceStartIndex + S.lineLength + 2).indexOf(" ") +
+          ext.sentence
+            .substring(S.sentenceStartIndex + S.lineLength + 2)
+            .indexOf(" ") +
           S.sentenceStartIndex +
           S.lineLength +
           1;
-        str = ext.sentence.substring(S.sentenceStartIndex, S.sentenceEndIndex + 1);
+        str = ext.sentence.substring(
+          S.sentenceStartIndex,
+          S.sentenceEndIndex + 1,
+        );
       }
       str = str.substring(1);
       return str;
@@ -114,7 +125,8 @@
 
     if (currentLevelList && currentLevelList.length > 0) {
       var startingLetters =
-        ext.levelDictionaries[S.currentLayout]["lvl" + S.currentLevel] + S.punctuation;
+        ext.levelDictionaries[S.currentLayout]["lvl" + S.currentLevel] +
+        S.punctuation;
 
       var circuitBreaker = 0;
       var wordsCreated = 0;
@@ -127,7 +139,9 @@
 
         if (circuitBreaker > 12000) {
           if (circuitBreaker > 30000) {
-            str += ext.levelDictionaries[S.currentLayout]["lvl" + S.currentLevel] + " ";
+            str +=
+              ext.levelDictionaries[S.currentLayout]["lvl" + S.currentLevel] +
+              " ";
             i += wordToAdd.length;
             wordsCreated++;
             circuitBreaker = 0;
@@ -163,10 +177,14 @@
       }
     } else {
       var startingLetters2 =
-        ext.levelDictionaries[S.currentLayout]["lvl" + S.currentLevel] + S.punctuation;
+        ext.levelDictionaries[S.currentLayout]["lvl" + S.currentLevel] +
+        S.punctuation;
 
       var wordsCreated2 = 0;
-      if (ext.levelDictionaries[S.currentLayout]["lvl" + S.currentLevel].length === 0) {
+      if (
+        ext.levelDictionaries[S.currentLayout]["lvl" + S.currentLevel]
+          .length === 0
+      ) {
         str = "";
       } else {
         for (var j = 0; j < S.lineLength; j = j) {
@@ -197,14 +215,18 @@
 
       if (S.currentLayout !== "custom" || i !== 6) {
         requiredLetters =
-          ext.levelDictionaries[S.currentLayout]["lvl" + (i + 1)] + S.punctuation;
+          ext.levelDictionaries[S.currentLayout]["lvl" + (i + 1)] +
+          S.punctuation;
         includedLetters += S.letterDictionary[objKeys[i]];
       } else {
         requiredLetters = includedLetters;
       }
 
       wordLists[objKeys[i]] = [];
-      wordLists[objKeys[i]] = ext.generateList(includedLetters, requiredLetters);
+      wordLists[objKeys[i]] = ext.generateList(
+        includedLetters,
+        requiredLetters,
+      );
     }
   };
 
@@ -238,7 +260,8 @@
     S.score = -1;
 
     S.requiredLetters = (
-      ext.levelDictionaries[S.currentLayout]["lvl" + S.currentLevel] + S.punctuation
+      ext.levelDictionaries[S.currentLayout]["lvl" + S.currentLevel] +
+      S.punctuation
     ).split("");
 
     if (!S.timeLimitMode) {
@@ -257,10 +280,11 @@
       D.testResults.classList.remove("initialStats");
     }
 
-    if (D.statsSection) {
-      D.statsSection.classList.add("transparent");
-      D.statsSection.classList.remove("initialStats");
-    }
+    // Keep stats section visible - don't hide it on reset
+    // if (D.statsSection) {
+    //   D.statsSection.classList.add("transparent");
+    //   D.statsSection.classList.remove("initialStats");
+    // }
 
     if (D.prompt) D.prompt.classList.remove("noDisplay");
 
@@ -275,5 +299,3 @@
     D.input.focus();
   };
 })(window.CC);
-
-
