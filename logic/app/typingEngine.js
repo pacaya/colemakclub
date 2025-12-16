@@ -4,11 +4,7 @@
   CC.typing.checkAnswerToIndex = function () {
     var S = CC.state;
     var D = CC.dom;
-    var inputVal = D.input.value;
-    return (
-      inputVal.slice(0, S.letterIndex) ==
-      S.correctAnswer.slice(0, S.letterIndex)
-    );
+    return S.correctAnswer.startsWith(D.input.value);
   };
 
   CC.typing.checkAnswer = function () {
@@ -160,11 +156,7 @@
         }
       } else {
         if (!specialKeyCodes.includes(e.keyCode) && e.key != "Process") {
-          if (e.key != "Process") {
-            D.input.value += e.key;
-          } else {
-            S.letterIndex--;
-          }
+          D.input.value += e.key;
         }
       }
 
@@ -183,7 +175,6 @@
           S.letterIndex = 0;
         } else {
           D.input.value += " ";
-          S.letterIndex++;
         }
       }
 
@@ -196,21 +187,18 @@
       if (e.keyCode == 8) {
         if (!e.ctrlKey) {
           D.input.value = D.input.value.substr(0, D.input.value.length - 1);
-          S.letterIndex--;
         }
-        if (S.letterIndex < 0) S.letterIndex = 0;
       }
 
-      if (!specialKeyCodes.includes(e.keyCode)) {
-        S.letterIndex++;
-      }
+      // Use input length as single source of truth for position
+      var inputLen = D.input.value.length;
 
       if (CC.typing.checkAnswerToIndex()) {
         D.input.style.color = "black";
         if (e.keyCode == 8) {
           CC.sound.playClickSound();
           if (e.ctrlKey) {
-            for (var i = 0; i < S.letterIndex; i++) {
+            for (var i = 0; i < inputLen; i++) {
               if (D.prompt.children[0].children[S.wordIndex].children[i]) {
                 D.prompt.children[0].children[S.wordIndex].children[
                   i
@@ -218,13 +206,12 @@
               }
             }
             D.input.value = "";
-            S.letterIndex = 0;
           } else {
             if (
-              D.prompt.children[0].children[S.wordIndex].children[S.letterIndex]
+              D.prompt.children[0].children[S.wordIndex].children[inputLen]
             ) {
               D.prompt.children[0].children[S.wordIndex].children[
-                S.letterIndex
+                inputLen
               ].style.color = "gray";
             }
           }
@@ -233,11 +220,11 @@
           S.correct++;
           if (
             D.prompt.children[0].children[S.wordIndex].children[
-              S.letterIndex - 1
+              inputLen - 1
             ]
           ) {
             D.prompt.children[0].children[S.wordIndex].children[
-              S.letterIndex - 1
+              inputLen - 1
             ].style.color = "green";
           }
         }
@@ -246,7 +233,7 @@
         if (e.keyCode == 8) {
           CC.sound.playClickSound();
           if (e.ctrlKey) {
-            for (var j = 0; j < S.letterIndex; j++) {
+            for (var j = 0; j < inputLen; j++) {
               if (D.prompt.children[0].children[S.wordIndex].children[j]) {
                 D.prompt.children[0].children[S.wordIndex].children[
                   j
@@ -254,13 +241,12 @@
               }
             }
             D.input.value = "";
-            S.letterIndex = 0;
           } else {
             if (
-              D.prompt.children[0].children[S.wordIndex].children[S.letterIndex]
+              D.prompt.children[0].children[S.wordIndex].children[inputLen]
             ) {
               D.prompt.children[0].children[S.wordIndex].children[
-                S.letterIndex
+                inputLen
               ].style.color = "gray";
             }
           }
@@ -269,19 +255,17 @@
           S.errors++;
           if (
             D.prompt.children[0].children[S.wordIndex].children[
-              S.letterIndex - 1
+              inputLen - 1
             ]
           ) {
             D.prompt.children[0].children[S.wordIndex].children[
-              S.letterIndex - 1
+              inputLen - 1
             ].style.color = "red";
           }
         }
 
         if (!S.requireBackspaceCorrection && !CC.typing.checkAnswerToIndex()) {
-          S.letterIndex--;
           D.input.value = D.input.value.substr(0, D.input.value.length - 1);
-          if (S.letterIndex < 0) S.letterIndex = 0;
         }
       }
 
@@ -293,6 +277,9 @@
       ) {
         CC.typing.endGame();
       }
+
+      // Sync letterIndex with actual input length at end of handler
+      S.letterIndex = D.input.value.length;
     });
 
     // fixes a small bug in mozilla
