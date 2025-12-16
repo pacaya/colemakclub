@@ -53,7 +53,7 @@ var minutes = 0; // tracks the number of minutes the current test has been runni
 var gameOn = false; // set to true when user starts typing in input field
 var correct = 0; // number of correct keystrokes during a game
 var errors = 0; // number of typing errors during a game
-var currentLevel = localStorage.getItem("currentLevel") || 1; // int representation of the current level, which determines which letter set to test
+var currentLevel = parseInt(localStorage.getItem("currentLevel")) || 1; // int representation of the current level, which determines which letter set to test
 var correctAnswer; // string representation of the current correct word
 var letterIndex = 0; // Keeps track of where in a word the user is
 // Increment with every keystroke except ' ', return, and backspace
@@ -1917,7 +1917,7 @@ for (button of buttons) {
   b.addEventListener("click", () => {
     let lev = b.innerHTML.replace(/ /, "").toLowerCase();
     // int representation of level we are choosing
-    lev = lev[lev.length - 1];
+    lev = parseInt(lev[lev.length - 1]);
     if (currentLayout == "tarmak" || currentLayout == "tarmakdh") {
       lev++;
     }
@@ -1959,7 +1959,7 @@ function switchLevel(lev) {
   }
 
   // Store the actual level for progress tracking (keep level 8 as 8)
-  currentLevel = lev;
+  currentLevel = parseInt(lev);
 
   // For word generation, level 8 uses level 7 word set (all words)
   var wordLevel = lev == 8 ? 7 : lev;
