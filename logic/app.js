@@ -404,15 +404,13 @@ function generateStatsHTML(level) {
         ? "-"
         : levelData.worstAccuracy) +
       "%</p>";
-
-    // Progress toward next level
-    if (level < 8 && levelLockingEnabled) {
-      html +=
-        "<p>Progress to next level: " +
-        levelData.consecutiveSuccesses +
-        "/3 consecutive goals met</p>";
-    }
   }
+
+  // Visual progress bar toward next level
+  if (levelLockingEnabled) {
+    html += generateProgressBarHTML(level);
+  }
+
   html += "</div>";
 
   // All levels summary
@@ -440,6 +438,184 @@ function generateStatsHTML(level) {
 function displayProgressStats(level) {
   if (progressStatsDiv) {
     progressStatsDiv.innerHTML = generateStatsHTML(level);
+  }
+
+  // Show chart toggle button if there are at least 2 tests
+  var toggleChartBtn = document.getElementById("toggleChartBtn");
+  var levelData = progressData.levelStats[level];
+  if (toggleChartBtn && levelData && levelData.lastHundredTests.length >= 2) {
+    toggleChartBtn.classList.remove("noDisplay");
+    toggleChartBtn.textContent = "Show Performance Chart";
+  } else if (toggleChartBtn) {
+    toggleChartBtn.classList.add("noDisplay");
+  }
+
+  // Hide chart initially (user can toggle it)
+  hidePerformanceChart();
+}
+
+// Generate HTML for progress bar showing consecutive successes
+function generateProgressBarHTML(level) {
+  var levelData = progressData.levelStats[level];
+  var successes = Math.min(levelData.consecutiveSuccesses, 3); // Cap at 3 for display
+
+  // Don't show progress bar for level 8 (final level)
+  if (parseInt(level) >= 8) {
+    return "";
+  }
+
+  var segments = "";
+  for (var i = 0; i < 3; i++) {
+    segments +=
+      '<div class="progressSegment ' +
+      (i < successes ? "filled" : "") +
+      '"></div>';
+  }
+
+  var nextLevelName = getLevelName(parseInt(level) + 1);
+
+  return (
+    '<div class="progressBarContainer">' +
+    '<span class="progressBarLabel">Progress to ' +
+    nextLevelName +
+    ":</span>" +
+    '<div class="progressBar">' +
+    segments +
+    "</div>" +
+    '<span class="progressBarLabel">' +
+    successes +
+    "/3</span>" +
+    "</div>"
+  );
+}
+
+// Chart instance (global for cleanup)
+var performanceChartInstance = null;
+
+// Display performance chart for a level
+function displayPerformanceChart(level) {
+  var levelData = progressData.levelStats[level];
+  var tests = levelData.lastHundredTests;
+
+  var chartContainer = document.getElementById("chartContainer");
+  var canvas = document.getElementById("performanceChart");
+
+  if (!chartContainer || !canvas) return;
+
+  // Need at least 2 data points for a meaningful chart
+  if (tests.length < 2) {
+    chartContainer.classList.add("noDisplay");
+    return;
+  }
+
+  // Destroy existing chart if any
+  if (performanceChartInstance) {
+    performanceChartInstance.destroy();
+    performanceChartInstance = null;
+  }
+
+  // Show chart container
+  chartContainer.classList.remove("noDisplay");
+
+  var ctx = canvas.getContext("2d");
+  var levelName = getLevelName(level);
+
+  performanceChartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: tests.map(function (_, i) {
+        return "Test " + (i + 1);
+      }),
+      datasets: [
+        {
+          label: "WPM",
+          data: tests.map(function (t) {
+            return t.wpm;
+          }),
+          borderColor: "#8727b8",
+          backgroundColor: "rgba(135, 39, 184, 0.1)",
+          tension: 0.3,
+          fill: true,
+          yAxisID: "y",
+        },
+        {
+          label: "Accuracy %",
+          data: tests.map(function (t) {
+            return t.accuracy;
+          }),
+          borderColor: "orange",
+          backgroundColor: "rgba(255, 165, 0, 0.1)",
+          tension: 0.3,
+          fill: false,
+          yAxisID: "y1",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        title: {
+          display: true,
+          text: levelName + " - Performance Trend",
+          color: "#fff",
+          font: { size: 14 },
+        },
+        legend: {
+          labels: { color: "#ccc" },
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color: "#888" },
+          grid: { color: "#333" },
+        },
+        y: {
+          type: "linear",
+          position: "left",
+          title: { display: true, text: "WPM", color: "#8727b8" },
+          ticks: { color: "#8727b8" },
+          grid: { color: "#333" },
+        },
+        y1: {
+          type: "linear",
+          position: "right",
+          title: { display: true, text: "Accuracy %", color: "orange" },
+          ticks: { color: "orange" },
+          min: 70,
+          max: 100,
+          grid: { drawOnChartArea: false },
+        },
+      },
+    },
+  });
+}
+
+// Hide chart
+function hidePerformanceChart() {
+  var chartContainer = document.getElementById("chartContainer");
+  if (chartContainer) {
+    chartContainer.classList.add("noDisplay");
+  }
+  if (performanceChartInstance) {
+    performanceChartInstance.destroy();
+    performanceChartInstance = null;
+  }
+}
+
+// Toggle chart visibility
+function togglePerformanceChart(level) {
+  var chartContainer = document.getElementById("chartContainer");
+  var toggleBtn = document.getElementById("toggleChartBtn");
+
+  if (!chartContainer) return;
+
+  if (chartContainer.classList.contains("noDisplay")) {
+    displayPerformanceChart(level);
+    if (toggleBtn) toggleBtn.textContent = "Hide Performance Chart";
+  } else {
+    hidePerformanceChart();
+    if (toggleBtn) toggleBtn.textContent = "Show Performance Chart";
   }
 }
 
@@ -541,6 +717,14 @@ function initProgressTracking() {
       // Level already unlocked before popup shown, just switch to it
       hideProgressionPopup();
       switchLevel(toLevel);
+    });
+  }
+
+  // Chart toggle button
+  var toggleChartBtn = document.getElementById("toggleChartBtn");
+  if (toggleChartBtn) {
+    toggleChartBtn.addEventListener("click", function () {
+      togglePerformanceChart(currentLevel);
     });
   }
 }

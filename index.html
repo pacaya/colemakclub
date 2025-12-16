@@ -31,6 +31,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
         <link rel="icon" href="img/favicon.webp" />
         <link rel="stylesheet" type="text/css" href="logic/main.css" />
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     </head>
     <body>
         <div id="selectors">
@@ -250,6 +251,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                     <div id="wpmText"></div>
                     <div id="goalStatus"></div>
                     <div id="progressStats"></div>
+                    <button id="toggleChartBtn" class="noDisplay">
+                        Show Performance Chart
+                    </button>
+                    <div id="chartContainer" class="noDisplay">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
                 </div>
             </div>
             <div class="cheatsheetContainer">

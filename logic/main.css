@@ -1067,5 +1067,72 @@ nav button.locked:hover {
     border-color: #00cc00;
 }
 
+/* Progress bar for consecutive successes */
+.progressBarContainer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1vh;
+    margin: 1.5vh 0;
+}
+
+.progressBar {
+    display: flex;
+    gap: 0.5vh;
+}
+
+.progressSegment {
+    width: 4vh;
+    height: 1.2vh;
+    background: #333;
+    border-radius: 3px;
+    border: 1px solid #555;
+    transition:
+        background 0.3s ease,
+        box-shadow 0.3s ease;
+}
+
+.progressSegment.filled {
+    background: var(--tertiary-accent-color);
+    border-color: var(--tertiary-accent-color);
+    box-shadow: 0 0 8px rgba(0, 255, 0, 0.4);
+}
+
+.progressBarLabel {
+    font-size: 1.6vmin;
+    color: #aaa;
+}
+
+/* Performance chart styles */
+#toggleChartBtn {
+    font-size: 1.5vmin;
+    padding: 1vh 2vh;
+    margin-top: 2vh;
+    background: transparent;
+    border: 1px solid var(--accent-color);
+    color: var(--accent-color);
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+#toggleChartBtn:hover {
+    background: rgba(135, 39, 184, 0.2);
+}
+
+#chartContainer {
+    width: 100%;
+    max-width: 55vmin;
+    margin: 2vh auto;
+    padding: 2vh;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid #333;
+    border-radius: 8px;
+}
+
+#chartContainer canvas {
+    width: 100% !important;
+    height: auto !important;
+}
+
 /*__________________progress tracking styles_________________*/
 /*___________________________________________________________*/
